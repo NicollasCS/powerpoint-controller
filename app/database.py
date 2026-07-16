@@ -7,16 +7,17 @@ from datetime import datetime, timedelta
 # ========== CONFIGURAÇÃO DO AMBIENTE ==========
 ENV = os.environ.get('ENV', 'development')
 
-# 🔧 FORÇA O USO DO SUPABASE EM PRODUÇÃO
+# 🔥 FORÇA O USO DO SUPABASE EM PRODUÇÃO
 if ENV == 'production':
     USE_SUPABASE = True
 else:
+    # Em desenvolvimento, usa SQLite se não tiver Supabase configurado
     USE_SUPABASE = os.environ.get('SUPABASE_URL') and os.environ.get('SUPABASE_KEY')
 
 print(f"🔧 Ambiente: {ENV}")
 print(f"🔧 Usando Supabase: {USE_SUPABASE}")
 
-# ========== SUPABASE (PRODUÇÃO) ==========
+# ========== SUPABASE ==========
 if USE_SUPABASE:
     try:
         from supabase import create_client, Client
@@ -25,7 +26,8 @@ if USE_SUPABASE:
         
         if not SUPABASE_URL or not SUPABASE_KEY:
             print("❌ ERRO: SUPABASE_URL ou SUPABASE_KEY não configurados!")
-            print("   Verifique as variáveis de ambiente no Vercel.")
+            if ENV == 'production':
+                raise Exception("❌ Produção exige Supabase! Configure as variáveis.")
             USE_SUPABASE = False
         else:
             supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
@@ -37,12 +39,15 @@ if USE_SUPABASE:
                 print("✅ Conexão com Supabase verificada!")
             except Exception as e:
                 print(f"❌ Erro ao testar conexão: {e}")
+                if ENV == 'production':
+                    raise Exception(f"❌ Não foi possível conectar ao Supabase: {e}")
                 USE_SUPABASE = False
                 
     except Exception as e:
         print(f"❌ Erro ao iniciar Supabase: {e}")
+        if ENV == 'production':
+            raise Exception(f"❌ Erro crítico no Supabase: {e}")
         USE_SUPABASE = False
-        print("⚠️ Usando SQLite como fallback")
 
 # ========== SQLITE (APENAS LOCAL) ==========
 DB_NAME = 'apresenta.db'
@@ -167,8 +172,6 @@ def get_user_by_email(email):
         return get_user_by_email_supabase(email)
     return get_user_by_email_sqlite(email)
 
-# ========== OUTRAS FUNÇÕES ==========
-
 def get_user_by_id_sqlite(user_id):
     conn = get_db()
     cursor = conn.cursor()
@@ -215,29 +218,6 @@ def get_user_by_token(token):
         return get_user_by_token_supabase(token)
     return get_user_by_token_sqlite(token)
 
-# ========== ATUALIZAR USUÁRIO ==========
-
-def update_user_token_sqlite(user_id, token):
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute('UPDATE users SET token = ? WHERE id = ?', (token, user_id))
-    conn.commit()
-    conn.close()
-
-def update_user_token_supabase(user_id, token):
-    try:
-        supabase.table('users').update({'token': token}).eq('id', user_id).execute()
-    except Exception as e:
-        print(f"Erro Supabase: {e}")
-
-def update_user_token(user_id, token):
-    if USE_SUPABASE:
-        update_user_token_supabase(user_id, token)
-    else:
-        update_user_token_sqlite(user_id, token)
-
-# ========== ETC ==========
-
 def get_user_by_reset_token(token):
     if USE_SUPABASE:
         try:
@@ -255,6 +235,19 @@ def get_user_by_reset_token(token):
         user = cursor.fetchone()
         conn.close()
         return user
+
+def update_user_token(user_id, token):
+    if USE_SUPABASE:
+        try:
+            supabase.table('users').update({'token': token}).eq('id', user_id).execute()
+        except Exception as e:
+            print(f"Erro Supabase: {e}")
+    else:
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute('UPDATE users SET token = ? WHERE id = ?', (token, user_id))
+        conn.commit()
+        conn.close()
 
 def update_user_email(user_id, new_email):
     if USE_SUPABASE:
@@ -334,8 +327,6 @@ def delete_user(user_id):
         conn.commit()
         conn.close()
 
-# ========== CÓDIGOS DE VERIFICAÇÃO ==========
-
 def save_verification_code(email, code, expires_at):
     if USE_SUPABASE:
         try:
@@ -393,4 +384,4 @@ if ENV != 'production' and not USE_SUPABASE:
     init_db()
 elif ENV == 'production' and not USE_SUPABASE:
     print("❌ ERRO: Em produção, você PRECISA usar Supabase!")
-    print("   Verifique as variáveis SUPABASE_URL e SUPABASE_KEY")
+    print("   Verifique as variáveis SUPABASE_URL e SUPABASE_KEY no Vercel.")
