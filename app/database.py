@@ -14,14 +14,11 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 print(f"✅ Conectado ao Supabase: {SUPABASE_URL}")
 
-# Testa a conexão
 try:
     supabase.table('users').select('*').limit(1).execute()
     print("✅ Conexão com Supabase verificada!")
 except Exception as e:
     raise Exception(f"❌ Erro ao conectar ao Supabase: {e}")
-
-# ========== FUNÇÕES ==========
 
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
