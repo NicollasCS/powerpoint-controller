@@ -10,13 +10,31 @@ USE_SUPABASE = os.environ.get('SUPABASE_URL') and os.environ.get('SUPABASE_KEY')
 
 # ========== SUPABASE (PRODUÇÃO) ==========
 if USE_SUPABASE:
-    from supabase import create_client, Client
-    SUPABASE_URL = os.environ.get('SUPABASE_URL')
-    SUPABASE_KEY = os.environ.get('SUPABASE_KEY')
-    supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-    print(f"✅ Usando Supabase em {ENV}")
-else:
-    print(f"✅ Usando SQLite em {ENV}")
+    try:
+        from supabase import create_client, Client
+        SUPABASE_URL = os.environ.get('SUPABASE_URL')
+        SUPABASE_KEY = os.environ.get('SUPABASE_KEY')
+        
+        if not SUPABASE_URL or not SUPABASE_KEY:
+            print("❌ ERRO: SUPABASE_URL ou SUPABASE_KEY não configurados!")
+            print("   Verifique as variáveis de ambiente no Vercel.")
+            USE_SUPABASE = False
+        else:
+            supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+            print(f"✅ Conectado ao Supabase: {SUPABASE_URL}")
+            
+            # Testa a conexão
+            try:
+                test = supabase.table('users').select('count').limit(1).execute()
+                print("✅ Conexão com Supabase verificada!")
+            except Exception as e:
+                print(f"❌ Erro ao testar conexão: {e}")
+                USE_SUPABASE = False
+                
+    except Exception as e:
+        print(f"❌ Erro ao iniciar Supabase: {e}")
+        USE_SUPABASE = False
+        print("⚠️ Usando SQLite como fallback")
 
 # ========== SQLITE (DESENVOLVIMENTO) ==========
 DB_NAME = 'apresenta.db'
