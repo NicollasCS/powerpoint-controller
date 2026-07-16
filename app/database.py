@@ -6,7 +6,15 @@ from datetime import datetime, timedelta
 
 # ========== CONFIGURAÇÃO DO AMBIENTE ==========
 ENV = os.environ.get('ENV', 'development')
-USE_SUPABASE = os.environ.get('SUPABASE_URL') and os.environ.get('SUPABASE_KEY')
+
+# 🔧 FORÇA O USO DO SUPABASE EM PRODUÇÃO
+if ENV == 'production':
+    USE_SUPABASE = True
+else:
+    USE_SUPABASE = os.environ.get('SUPABASE_URL') and os.environ.get('SUPABASE_KEY')
+
+print(f"🔧 Ambiente: {ENV}")
+print(f"🔧 Usando Supabase: {USE_SUPABASE}")
 
 # ========== SUPABASE (PRODUÇÃO) ==========
 if USE_SUPABASE:
@@ -25,7 +33,7 @@ if USE_SUPABASE:
             
             # Testa a conexão
             try:
-                test = supabase.table('users').select('count').limit(1).execute()
+                test = supabase.table('users').select('*').limit(1).execute()
                 print("✅ Conexão com Supabase verificada!")
             except Exception as e:
                 print(f"❌ Erro ao testar conexão: {e}")
@@ -36,19 +44,25 @@ if USE_SUPABASE:
         USE_SUPABASE = False
         print("⚠️ Usando SQLite como fallback")
 
-# ========== SQLITE (DESENVOLVIMENTO) ==========
+# ========== SQLITE (APENAS LOCAL) ==========
 DB_NAME = 'apresenta.db'
 
 def get_db():
-    """Retorna uma conexão com o banco de dados SQLite"""
+    """Retorna uma conexão com o banco de dados SQLite (apenas local)"""
+    if ENV == 'production':
+        raise Exception("❌ SQLite não suportado em produção! Use Supabase.")
     conn = sqlite3.connect(DB_NAME)
     conn.row_factory = sqlite3.Row
     return conn
 
 def init_db():
-    """Cria as tabelas SQLite se não existirem"""
+    """Cria as tabelas SQLite se não existirem (apenas local)"""
     if USE_SUPABASE:
         print("ℹ️ Supabase: tabelas criadas manualmente no dashboard")
+        return
+    
+    if ENV == 'production':
+        print("❌ Não é possível criar SQLite em produção!")
         return
     
     conn = get_db()
@@ -222,7 +236,7 @@ def update_user_token(user_id, token):
     else:
         update_user_token_sqlite(user_id, token)
 
-# ========== ETC (implementar para as duas) ==========
+# ========== ETC ==========
 
 def get_user_by_reset_token(token):
     if USE_SUPABASE:
@@ -374,6 +388,9 @@ def verify_code(email, code):
             return True
         return False
 
-# Inicializa o SQLite local
-if not USE_SUPABASE:
+# Só inicializa o SQLite se NÃO estiver em produção
+if ENV != 'production' and not USE_SUPABASE:
     init_db()
+elif ENV == 'production' and not USE_SUPABASE:
+    print("❌ ERRO: Em produção, você PRECISA usar Supabase!")
+    print("   Verifique as variáveis SUPABASE_URL e SUPABASE_KEY")
