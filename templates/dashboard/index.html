@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📽️ Apresenta</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #0a0a0a;
+            min-height: 100vh;
+            color: white;
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #333;
+        }
+        .header h1 {
+            font-size: 24px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .header .badge {
+            background: #2d2d44;
+            padding: 4px 12px;
+            border-radius: 20px;
+            color: #aaa;
+            font-size: 12px;
+        }
+        
+        /* Upload */
+        .upload-area {
+            background: #1a1a2e;
+            border: 3px dashed #667eea;
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.3s;
+            margin-bottom: 20px;
+        }
+        .upload-area:hover { background: #222244; border-color: #764ba2; }
+        .upload-area input[type="file"] { display: none; }
+        .upload-icon { font-size: 50px; display: block; margin-bottom: 10px; }
+        .upload-area .dica {
+            background: #2d2d44;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            color: #aaa;
+            font-size: 14px;
+            text-align: left;
+        }
+        .upload-area .dica strong { color: #ffc107; }
+        
+        /* Estado: Pronto para apresentar */
+        .ready-state {
+            display: none;
+            text-align: center;
+            padding: 60px 20px;
+            background: #1a1a2e;
+            border-radius: 20px;
+            margin-bottom: 20px;
+        }
+        .ready-state .icon { font-size: 80px; margin-bottom: 20px; }
+        .ready-state h2 { color: #fff; font-size: 28px; margin-bottom: 10px; }
+        .ready-state p { color: #888; font-size: 16px; }
+        .btn-start-presentation {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 16px 50px;
+            border-radius: 50px;
+            font-size: 20px;
+            cursor: pointer;
+            margin-top: 30px;
+            transition: 0.3s;
+            font-weight: bold;
+        }
+        .btn-start-presentation:hover { transform: scale(1.05); }
+        .btn-start-presentation:active { transform: scale(0.95); }
+        
+        /* Modo apresentação (tela cheia) */
+        .presentation-mode {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #000;
+            z-index: 9999;
+        }
+        .presentation-mode .slide-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .presentation-mode .slide-container img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+        .presentation-mode .slide-number-badge {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: rgba(255,255,255,0.15);
+            padding: 8px 18px;
+            border-radius: 20px;
+            color: #fff;
+            font-size: 14px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .btn-exit-fullscreen {
+            position: fixed;
+            bottom: 30px;
+            left: 30px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 8px 18px;
+            border-radius: 20px;
+            font-size: 13px;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            transition: 0.3s;
+        }
+        .btn-exit-fullscreen:hover { background: rgba(255,255,255,0.2); }
+        
+        /* Miniaturas (fora do modo apresentação) */
+        .thumbnails {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding: 15px 0;
+            scrollbar-width: thin;
+            scrollbar-color: #667eea transparent;
+        }
+        .thumbnails::-webkit-scrollbar { height: 4px; }
+        .thumbnails::-webkit-scrollbar-thumb { background: #667eea; border-radius: 2px; }
+        .thumbnail {
+            min-width: 100px;
+            height: 70px;
+            background: #1a1a2e;
+            border-radius: 8px;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: 0.3s;
+            overflow: hidden;
+            flex-shrink: 0;
+            position: relative;
+        }
+        .thumbnail:hover { border-color: #667eea; }
+        .thumbnail.active { border-color: #667eea; box-shadow: 0 0 20px rgba(102, 126, 234, 0.4); }
+        .thumbnail img { width: 100%; height: 100%; object-fit: cover; }
+        .thumbnail .thumb-num {
+            position: absolute;
+            bottom: 4px;
+            right: 6px;
+            background: rgba(0,0,0,0.7);
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            color: #fff;
+        }
+        
+        .status {
+            text-align: center;
+            color: #666;
+            font-size: 13px;
+            margin-top: 10px;
+        }
+        .loading { text-align: center; padding: 40px; color: #666; }
+        .loading .spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 3px solid #333;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 15px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 768px) {
+            .container { padding: 10px; }
+            .upload-area { padding: 20px; }
+            .thumbnail { min-width: 70px; height: 50px; }
+            .ready-state { padding: 40px 20px; }
+            .ready-state .icon { font-size: 60px; }
+            .ready-state h2 { font-size: 22px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+    <h1>📽️ Apresenta</h1>
+    <div>
+        <span style="color: #888; font-size: 14px; margin-right: 15px;">{{ user_email }}</span>
+        <a href="/settings" style="color: #667eea; text-decoration: none; font-size: 14px;">⚙️</a>
+        <button onclick="logout()" style="background: #2d2d44; color: #aaa; border: none; padding: 4px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; margin-left: 10px;">Sair</button>
+    </div>
+</div>
+        
+        <!-- Upload -->
+        <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+            <span class="upload-icon">📁</span>
+            <p style="font-size: 18px; margin-bottom: 10px;">Envie seu PDF</p>
+            <p style="color: #888; font-size: 14px;">Clique para selecionar</p>
+            <div class="dica">
+                <strong>💡 Dica:</strong> Converta seu PowerPoint para PDF primeiro!<br>
+                <small>No PowerPoint: Arquivo → Exportar → Criar PDF</small>
+            </div>
+            <input type="file" id="fileInput" accept=".pdf" onchange="uploadFile()">
+            <div id="uploadStatus" style="margin-top: 15px; color: #aaa;"></div>
+        </div>
+        
+        <!-- Estado: Pronto para apresentar -->
+        <div class="ready-state" id="readyState">
+            <div class="icon">📽️</div>
+            <h2>Pronto para apresentar</h2>
+            <p>Use o celular para controlar os slides</p>
+            <button class="btn-start-presentation" onclick="startPresentation()">
+                ▶️ Iniciar Apresentação
+            </button>
+            <div id="linkInfo" style="margin-top: 15px; color: #666; font-size: 14px; word-break: break-all;">
+                Token para o celular: <span id="presentationLink" style="color: #667eea; font-weight: bold;"></span>
+            </div>
+            <div style="margin-top: 10px;">
+                <button onclick="copyLink()" style="background: #2d2d44; color: #aaa; border: none; padding: 6px 16px; border-radius: 5px; cursor: pointer; font-size: 12px;">📋 Copiar link</button>
+            </div>
+        </div>
+        
+        <!-- Miniaturas -->
+        <div id="thumbnailsArea" style="display: none;">
+            <div class="thumbnails" id="thumbnails"></div>
+        </div>
+        
+        <div class="status" id="status">Aguardando upload...</div>
+    </div>
+    
+    <!-- Modo Apresentação (Tela Cheia) -->
+    <div class="presentation-mode" id="presentationMode">
+        <div class="slide-container" id="presentationContainer">
+            <div class="loading" id="presentationLoading">
+                <div class="spinner"></div>
+                <div>Carregando...</div>
+            </div>
+            <img id="presentationImage" style="display:none; width: 100%; height: 100%; object-fit: contain;" alt="Slide">
+        </div>
+        <div class="slide-number-badge" id="presentationBadge">1 / 0</div>
+        <button class="btn-exit-fullscreen" onclick="exitPresentation()">⏹️ Sair</button>
+    </div>
+
+    <script>
+        let currentPptId = null;
+        let currentSlide = 0;
+        let totalSlides = 0;
+        let slidesData = [];
+        let isPresentationMode = false;
+        let updateInterval = null;
+        
+        function showStatus(msg, isError = false) {
+            document.getElementById('status').textContent = msg;
+            document.getElementById('status').style.color = isError ? '#e74c3c' : '#666';
+        }
+        
+        function showUploadStatus(msg, isError = false) {
+            const el = document.getElementById('uploadStatus');
+            el.textContent = msg;
+            el.style.color = isError ? '#e74c3c' : '#4CAF50';
+        }
+        
+        async function uploadFile() {
+    const input = document.getElementById('fileInput');
+    const file = input.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    showUploadStatus('⏳ Processando... Aguarde alguns segundos');
+    document.querySelector('.upload-area').style.opacity = '0.5';
+
+    try {
+        const response = await fetch('/api/upload', { method: 'POST', body: formData });
+        const data = await response.json();
+
+        if (data.status === 'success') {
+            currentPptId = data.ppt_id;
+            showUploadStatus('✅ ' + data.message);
+            
+            // ========== CÓDIGO NOVO ==========
+            // Esconde upload, mostra "Pronto para apresentar"
+            document.getElementById('uploadArea').style.display = 'none';
+            document.getElementById('readyState').style.display = 'block';
+            
+            // MOSTRA O TOKEN em vez do link
+            const token = data.token || 'erro-ao-gerar';
+            document.getElementById('presentationLink').textContent = token;
+            
+            // Carrega os slides
+            await loadSlides(currentPptId);
+            showStatus('✅ Pronto! Use o token no celular.');
+            // ========== FIM DO CÓDIGO NOVO ==========
+            
+        } else {
+            showUploadStatus('❌ ' + (data.error || 'Erro ao processar'), true);
+        }
+    } catch (error) {
+        showUploadStatus('❌ Erro de conexão', true);
+    } finally {
+        document.querySelector('.upload-area').style.opacity = '1';
+    }
+}
+        
+        async function loadSlides(pptId) {
+            try {
+                const response = await fetch(`/api/slides/${pptId}`);
+                const data = await response.json();
+                
+                if (data.error) {
+                    showStatus('❌ ' + data.error, true);
+                    return;
+                }
+                
+                slidesData = data.slides || [];
+                totalSlides = data.total || 0;
+                currentSlide = data.slide_atual || 0;
+                
+                // Cria miniaturas
+                const container = document.getElementById('thumbnails');
+                container.innerHTML = '';
+                slidesData.forEach((slide, i) => {
+                    const thumb = document.createElement('div');
+                    thumb.className = 'thumbnail' + (i === currentSlide ? ' active' : '');
+                    if (slide.imagem) {
+                        thumb.innerHTML = `<img src="${slide.imagem}" alt="Slide ${i+1}"><span class="thumb-num">${i+1}</span>`;
+                    } else {
+                        thumb.innerHTML = `<span style="color:#666;font-size:12px;">${i+1}</span>`;
+                    }
+                    thumb.onclick = () => goToSlide(i);
+                    container.appendChild(thumb);
+                });
+                document.getElementById('thumbnailsArea').style.display = 'block';
+                
+                // Inicia atualização automática
+                if (updateInterval) clearInterval(updateInterval);
+                updateInterval = setInterval(updateStatus, 1000);
+                
+            } catch (error) {
+                showStatus('❌ Erro ao carregar slides', true);
+            }
+        }
+        
+        function startPresentation() {
+            if (!slidesData.length) return;
+            isPresentationMode = true;
+            
+            const mode = document.getElementById('presentationMode');
+            const img = document.getElementById('presentationImage');
+            const loading = document.getElementById('presentationLoading');
+            
+            mode.style.display = 'block';
+            img.style.display = 'none';
+            loading.style.display = 'block';
+            
+            // Tenta entrar em tela cheia
+            if (document.documentElement.requestFullscreen) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            }
+            
+            updatePresentationSlide();
+            
+            // Marca como ativo no servidor
+            fetch(`/api/start/${currentPptId}`);
+        }
+        
+        function exitPresentation() {
+            isPresentationMode = false;
+            document.getElementById('presentationMode').style.display = 'none';
+            
+            if (document.fullscreenElement) {
+                document.exitFullscreen().catch(() => {});
+            }
+        }
+        
+        function updatePresentationSlide() {
+            if (!slidesData.length || currentSlide >= slidesData.length) return;
+            
+            const slide = slidesData[currentSlide];
+            const img = document.getElementById('presentationImage');
+            const loading = document.getElementById('presentationLoading');
+            const badge = document.getElementById('presentationBadge');
+            
+            if (slide && slide.imagem) {
+                img.src = slide.imagem;
+                img.style.display = 'block';
+                loading.style.display = 'none';
+                badge.textContent = `${currentSlide + 1} / ${totalSlides}`;
+            }
+        }
+        
+        async function goToSlide(index) {
+            if (index === currentSlide || index < 0 || index >= totalSlides) return;
+            
+            while (currentSlide < index) await nextSlide();
+            while (currentSlide > index) await prevSlide();
+        }
+        
+        async function updateStatus() {
+            if (!currentPptId) return;
+            
+            try {
+                const response = await fetch(`/api/status/${currentPptId}`);
+                const data = await response.json();
+                
+                if (data.error) return;
+                
+                const newSlide = data.slide_atual || 0;
+                if (newSlide !== currentSlide) {
+                    currentSlide = newSlide;
+                    
+                    // Atualiza miniaturas
+                    document.querySelectorAll('.thumbnail').forEach((el, i) => {
+                        el.classList.toggle('active', i === currentSlide);
+                    });
+                    
+                    // Atualiza apresentação se estiver ativa
+                    if (isPresentationMode) {
+                        updatePresentationSlide();
+                    }
+                }
+            } catch (error) {}
+        }
+        
+        async function nextSlide() {
+            if (!currentPptId) return;
+            try {
+                await fetch(`/api/next/${currentPptId}`);
+                await updateStatus();
+            } catch (error) {}
+        }
+        
+        async function prevSlide() {
+            if (!currentPptId) return;
+            try {
+                await fetch(`/api/prev/${currentPptId}`);
+                await updateStatus();
+            } catch (error) {}
+        }
+        
+        function copyLink() {
+            const link = document.getElementById('presentationLink').textContent;
+            navigator.clipboard.writeText(link).then(() => {
+                alert('✅ Link copiado!');
+            });
+        }
+        
+        // Teclado (PC)
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && isPresentationMode) {
+                exitPresentation();
+            }
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                e.preventDefault();
+                nextSlide();
+            } else if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                prevSlide();
+            }
+        });
+        
+        // Sair do fullscreen com ESC
+        document.addEventListener('fullscreenchange', () => {
+            if (!document.fullscreenElement && isPresentationMode) {
+                exitPresentation();
+            }
+        });
+
+        async function logout() {
+        await fetch('/api/logout', { method: 'POST' });
+        window.location.href = '/login';
+    }
+    </script>
+</body>
+</html>

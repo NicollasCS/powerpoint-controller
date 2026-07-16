@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro - Apresenta</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 400px;
+            width: 90%;
+        }
+        h1 { color: #333; text-align: center; margin-bottom: 30px; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 5px; color: #555; font-weight: 500; }
+        input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: 0.3s;
+        }
+        input:focus { border-color: #667eea; outline: none; }
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .btn:hover { transform: scale(1.02); }
+        .links { text-align: center; margin-top: 20px; }
+        .links a { color: #667eea; text-decoration: none; font-size: 14px; }
+        .links a:hover { text-decoration: underline; }
+        .error { color: #e74c3c; text-align: center; margin-top: 10px; font-size: 14px; white-space: pre-line; }
+        .success { color: #2ecc71; text-align: center; margin-top: 10px; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📝 Criar Conta</h1>
+        <div id="message"></div>
+        <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="email" placeholder="seu@email.com">
+        </div>
+        <div class="form-group">
+            <label>Senha</label>
+            <input type="password" id="password" placeholder="••••••••">
+        </div>
+        <div class="form-group">
+            <label>Confirmar Senha</label>
+            <input type="password" id="confirm_password" placeholder="••••••••">
+        </div>
+        <button class="btn" onclick="register()">Criar Conta</button>
+        <div class="links">
+            <a href="/login">Já tenho conta</a>
+        </div>
+    </div>
+
+    <script>
+        function showMessage(msg, isError = true) {
+            const el = document.getElementById('message');
+            el.textContent = msg;
+            el.className = isError ? 'error' : 'success';
+        }
+
+        async function register() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const confirm = document.getElementById('confirm_password').value;
+
+            if (!email || !password || !confirm) {
+                showMessage('Preencha todos os campos');
+                return;
+            }
+
+            if (password !== confirm) {
+                showMessage('As senhas não coincidem');
+                return;
+            }
+
+            if (password.length < 6) {
+                showMessage('A senha deve ter pelo menos 6 caracteres');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    showMessage('✅ Conta criada! Redirecionando...', false);
+                    setTimeout(() => window.location.href = '/login', 1500);
+                } else {
+                    showMessage('❌ ' + data.error);
+                }
+            } catch (error) {
+                showMessage('❌ Erro de conexão');
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') register();
+        });
+    </script>
+</body>
+</html>
