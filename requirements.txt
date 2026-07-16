@@ -1,5 +1,3 @@
 flask
 supabase
 python-dotenv
-pdf2image
-Pillow
