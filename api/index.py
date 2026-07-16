@@ -1,12 +1,11 @@
 from flask import Flask, render_template, request, jsonify, session, redirect
 import os
-import sys
 import hashlib
 import secrets
 from datetime import datetime, timedelta
 from supabase import create_client, Client
 
-# ========== CONFIGURAÇÕES ==========
+# ========== SUPABASE ==========
 SUPABASE_URL = os.environ.get('SUPABASE_URL')
 SUPABASE_KEY = os.environ.get('SUPABASE_KEY')
 
@@ -16,12 +15,7 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 print(f"✅ Conectado ao Supabase: {SUPABASE_URL}")
 
-try:
-    supabase.table('users').select('*').limit(1).execute()
-    print("✅ Conexão com Supabase verificada!")
-except Exception as e:
-    raise Exception(f"❌ Erro ao conectar ao Supabase: {e}")
-
+# ========== FLASK ==========
 app = Flask(__name__, template_folder='../templates', static_folder='../static')
 app.secret_key = os.environ.get('SECRET_KEY', 'sua-chave-secreta-aqui')
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
